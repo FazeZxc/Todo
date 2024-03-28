@@ -4,6 +4,7 @@ import {
   Button,
   Col,
   DatePicker,
+  DatePickerProps,
   Drawer,
   Form,
   Input,
@@ -17,7 +18,6 @@ import TodoTable from "./TodoTable";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import { Todo, todoAtom } from "../store/todoAtom";
 import { isString } from "antd/es/button";
-import { DatePickerType } from "antd/es/date-picker";
 import { backendUrlAtom } from "../store/urlAtom";
 
 const { Option } = Select;
@@ -109,14 +109,15 @@ export const TodoInput: React.FC = () => {
     }
   };
 
-  const handleDateChange = (e: React.ChangeEvent<DatePickerType>) => {
-    setUserInput((prevState) => {
+  const handleDateChange: DatePickerProps['onChange'] = (dateString) => {
+    console.log(dateString);
+    setUserInput((prevState): Partial<Todo> =>{
       const updatedState = {
         ...prevState,
-        dueDate: e.$d.toString(),
-      };
-      return updatedState;
-    });
+        dueDate: dateString.format('YYYY-MM-DD')
+      }
+      return updatedState
+    })
   };
 
   const handleChange = (

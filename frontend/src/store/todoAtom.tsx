@@ -4,7 +4,7 @@ export interface Todo{
     title: string;
     createdby: string;
     status: string;
-    dueDate: string;
+    dueDate: string | null;
     description: string;
   }
   

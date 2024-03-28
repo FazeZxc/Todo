@@ -2,19 +2,11 @@ import React from "react";
 import { Table, Tag } from "antd";
 import type { TableProps } from "antd";
 import { useRecoilValue } from "recoil";
-import { todoAtom } from "../store/todoAtom";
+import { Todo, todoAtom } from "../store/todoAtom";
 import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
 
-interface DataType {
-  _id: string;
-  title: string;
-  createdby: string;
-  status: string;
-  dueDate: string;
-  description: string;
-}
 
-type updateTodoProp = (param1: string, param2: Partial<DataType>) => void;
+type updateTodoProp = (param1: string, param2: Partial<Todo>) => void;
 type deleteTodoProp = (param1: string) => void
 interface props {
   updateTodo: updateTodoProp;
@@ -23,7 +15,7 @@ interface props {
 
 const TodoTable: React.FC<props> = ({ updateTodo, deleteTodo }) => {
   const todos = useRecoilValue(todoAtom);
-  const columns: TableProps<DataType>["columns"] = [
+  const columns: TableProps<Todo>["columns"] = [
     {
       title: "Title",
       dataIndex: "title",
@@ -62,7 +54,7 @@ const TodoTable: React.FC<props> = ({ updateTodo, deleteTodo }) => {
       },
     },
     {
-      title: "DueDate",
+      title: "Due Date",
       key: "dueDate",
       dataIndex: "dueDate",
       render: (record) => <a>{record}</a>,
