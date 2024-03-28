@@ -1,4 +1,10 @@
-import express, { Express, Request, Response, Application, response } from "express";
+import express, {
+  Express,
+  Request,
+  Response,
+  Application,
+  response,
+} from "express";
 import dotenv from "dotenv";
 import bodyParser from "body-parser";
 import mongoose from "mongoose";
@@ -8,12 +14,19 @@ import jwt from "jsonwebtoken";
 import bcryptjs from "bcryptjs";
 import { authenticationToken } from "./middlewares/auth";
 import { Todo } from "./models/todos";
+import cookieParser from 'cookie-parser'
 dotenv.config();
 
 const app: Application = express();
 const port = (process.env.PORT as string) || 8000;
 const jwtsecretKey: string = process.env.JWTSECRET as string;
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
+app.use(cookieParser())
 app.use(bodyParser.json());
 app.use(express.json());
 app.use(
@@ -43,9 +56,9 @@ app.post("/auth/register", async (req: Request, res: Response) => {
       return;
     }
     const newUser = await User.create({
-      name,
-      email,
-      hashedPassword,
+      name: name,
+      email: email,
+      password: hashedPassword,
     });
     await newUser.save();
     res.status(200).json({
@@ -79,7 +92,7 @@ app.post("/auth/login", async (req: Request, res: Response) => {
     }
     const isPasswordMatched = await bcryptjs.compare(
       req.body.password,
-      password
+      isUserExist?.password
     );
     if (!isPasswordMatched) {
       res.status(400).json({
@@ -100,6 +113,7 @@ app.post("/auth/login", async (req: Request, res: Response) => {
       success: true,
       message: "Login Success",
       token: token,
+      user: isUserExist,
     });
   } catch (error: any) {
     res.status(400).json({
@@ -118,72 +132,93 @@ app.post("/logout", (req: Request, res: Response) => {
   res.send("Logged out successfully");
 });
 
+app.get("/todos", authenticationToken, async (req: Request, res: Response) => {
+  try {
+    const todos = await Todo.find();
+    res.status(200).json({
+      todos: todos,
+      message: "Todos fetched from the server",
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Internal Server Error");
+  }
+});
 
-app.get("/todos" , async (req: Request , res:Response )=>{
-    try{
-        const todos = await Todo.find()
-        res.status(200).json({
-            todos: todos,
-            message: "Todos fetched from the server"
-        })
-    }catch(error){
-        console.error(error)
-        res.status(500).send("Internal Server Error")
-    }
-})
+app.post("/todos", authenticationToken, async (req: Request, res: Response) => {
+  try {
+    const { title, status, dueDate, createdby, description, tickedComplete } =
+      req.body;
+    const newTodo = new Todo({
+      title,
+      status,
+      dueDate,
+      createdby,
+      description,
+      tickedComplete,
+    });
+    await newTodo.save();
+    res.status(201).json({
+      newTodo: newTodo,
+      message: "Todo created succesfully",
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Failed to create a to-do");
+  }
+});
 
-app.post("/todos" , async(req: Request , res: Response)=>{
-    try{
-        const { title , status, dueDate , createdBy , description , tickedComplete } = req.body
-        const newTodo = new Todo({title , status, dueDate , createdBy , description , tickedComplete })
-        await newTodo.save()
-        res.status(201).json({
-            newTodo: newTodo,
-            message: 'Todo created succesfully'
-        })
-    }catch(error){
-        console.error(error)
-        res.status(500).send("Failed to create a to-do")
+app.put(
+  "/todos/:id",
+  authenticationToken,
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { title, status, dueDate, createdby, description, tickedComplete } =
+        req.body;
+      const updatedTodo = await Todo.findByIdAndUpdate(
+        id,
+        { title, status, dueDate, createdby, description, tickedComplete },
+        { new: true }
+      );
+      if (!updatedTodo) {
+        return res.status(404).json({
+          message: "to-do not found",
+        });
+      }
+      res.status(200).json({
+        message: "to-do updated successfully",
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).send("Internal Server Error");
     }
-})
+  }
+);
 
-app.put('/todos/:id', async(req: Request , res: Response)=>{
-    try{
-        const { id } = req.params
-        const { title , status, dueDate , createdBy , description , tickedComplete  } = req.body
-        const updatedTodo = await Todo.findByIdAndUpdate(id,{title , status, dueDate , createdBy , description , tickedComplete } , {new : true})
-        if(!updatedTodo){
-            return res.status(404).json({
-                message: "to-do not found"
-            })
-        }
-        res.status(200).json({
-            message: "to-do updated successfully"
-        })
-    }catch(error){
-        console.error(error)
-        res.status(500).send("Internal Server Error")
+app.delete(
+  "/todos/:id",
+  authenticationToken,
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { title, status, dueDate, createdby, description, tickedComplete } =
+        req.body;
+      const deletedTodo = await Todo.findByIdAndDelete(id);
+      if (!deletedTodo) {
+        return res.status(404).json({
+          message: "to-do not found",
+        });
+      }
+      res.status(200).json({
+        message: "to-do deleted successfully",
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).send("Internal Server Error");
     }
-})
-
-app.delete('/todos/:id', async(req: Request , res: Response)=>{
-    try{
-        const { id } = req.params
-        const { title , status, dueDate , createdBy , description , tickedComplete  } = req.body
-        const deletedTodo = await Todo.findByIdAndDelete(id)
-        if(!deletedTodo){
-            return res.status(404).json({
-                message: "to-do not found"
-            })
-        }
-        res.status(200).json({
-            message: "to-do deleted successfully"
-        })
-    }catch(error){
-        console.error(error)
-        res.status(500).send("Internal Server Error")
-    }
-})
+  }
+);
 
 app.listen(port, async () => {
   console.log(`[server]: Server is running at http://localhost:${port}`);

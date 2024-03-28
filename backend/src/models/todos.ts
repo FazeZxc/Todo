@@ -9,14 +9,14 @@ const todoSchema = new mongoose.Schema({
     status: {
         type: String,
         required: false,
-        default: "To do",
+        default: "To-do",
     },
     dueDate: {
         type: String,
         required: false,
         default: "none"
     },
-    createdBy:{
+    createdby:{
         type: String,
         required: false,
     },

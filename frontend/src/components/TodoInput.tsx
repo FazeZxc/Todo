@@ -1,12 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { PlusOutlined } from "@ant-design/icons";
 import {
-  EditOutlined,
-  EllipsisOutlined,
-  SettingOutlined,
-} from "@ant-design/icons";
-import { Avatar, Card, Skeleton, Typography } from "antd";
-import {
   Button,
   Col,
   DatePicker,
@@ -16,24 +10,21 @@ import {
   Row,
   Select,
   Space,
+  message,
 } from "antd";
 import axios from "axios";
+import TodoTable from "./TodoTable";
+import { useRecoilValue, useSetRecoilState } from "recoil";
+import { Todo, todoAtom } from "../store/todoAtom";
+import { isString } from "antd/es/button";
+import { DatePickerType } from "antd/es/date-picker";
+import { backendUrlAtom } from "../store/urlAtom";
 
-interface Todo {
-  _id: string;
-  title: string;
-  createdby: string;
-  status: string;
-  due: string;
-  description: string;
-}
-
-const { Meta } = Card;
 const { Option } = Select;
-const { Text , Title } = Typography;
 
 export const TodoInput: React.FC = () => {
-  const [todos, setTodos] = useState<Todo[]>([]);
+  const backendUrl = useRecoilValue(backendUrlAtom);
+  const setTodos = useSetRecoilState(todoAtom);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userInput, setUserInput] = useState<Partial<Todo>>(() => {
@@ -41,28 +32,58 @@ export const TodoInput: React.FC = () => {
       title: "",
       createdby: "",
       status: "",
-      due: "",
+      dueDate: "",
       description: "",
     };
   });
 
   useEffect(() => {
     fetchTodos();
-  }, []);
+  });
 
   const fetchTodos = async () => {
     try {
-      const response = await axios.get<Todo[]>("http://localhost:3000/todos");
-      console.log(response.data.todos);
+      const response = await axios.get<Todo[]>(backendUrl+"/todos", {
+        withCredentials: true,
+      });
       setTodos(response.data.todos);
       setLoading(false);
     } catch (error) {
       console.error("Error fetching todos:", error);
     }
   };
+  const [messageApi, contextHolder] = message.useMessage();
+  const key = "updatable";
+  const openMessage = () => {
+    messageApi.open({
+      key,
+      type: "loading",
+      content: "creating to-do",
+    });
+    setTimeout(() => {
+      if (!userInput.title) {
+        messageApi.open({
+          key,
+          type: "error",
+          content: "Entries not filled",
+          duration: 2,
+        });
+      } else {
+        messageApi.open({
+          key,
+          type: "success",
+          content: "To-do created!",
+          duration: 2,
+        });
+        createTodo();
+      }
+    }, 1000);
+  };
   const updateTodo = async (id: string, updatedTodo: Partial<Todo>) => {
     try {
-      await axios.put(`http://localhost:3000/todos/${id}`, updatedTodo);
+      await axios.put(backendUrl + `/todos/${id}`, updatedTodo, {
+        withCredentials: true,
+      });
       fetchTodos();
     } catch (error) {
       console.error("Error updating todo:", error);
@@ -71,16 +92,42 @@ export const TodoInput: React.FC = () => {
 
   const deleteTodo = async (id: string) => {
     try {
-      await axios.delete(`http://localhost:3000/todos/${id}`);
+      await axios.delete(backendUrl + `/todos/${id}`, {
+        withCredentials: true,
+      });
       fetchTodos();
     } catch (error) {
       console.error("Error deleting todo:", error);
     }
   };
+
+  const handleDateChange = (e: React.ChangeEvent<DatePickerType>) => {
+    setUserInput((prevState) => {
+      const updatedState = {
+        ...prevState,
+        dueDate: e.$d.toString(),
+      };
+      return updatedState;
+    });
+  };
+
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLSelectElement | HTMLTextAreaElement | HTMLInputElement
+    >
   ) => {
+    if (isString(e)) {
+      setUserInput((prevState) => {
+        const updatedState = {
+          ...prevState,
+          status: e,
+        };
+        return updatedState;
+      });
+      return;
+    }
     const { id, value } = e.target;
+    console.log(id, value, e);
     setUserInput((prevState) => {
       const updatedState = {
         ...prevState,
@@ -94,19 +141,25 @@ export const TodoInput: React.FC = () => {
     setOpen(true);
   };
 
+  const [form] = Form.useForm();
   const onClose = () => {
     setOpen(false);
   };
 
   const createTodo = async () => {
     setOpen(false);
+    console.log(userInput);
+    // openMessage()
     try {
-      await axios.post("http://localhost:3000/todos", userInput);
+      await axios.post(backendUrl +"/todos", userInput, {
+        withCredentials: true,
+      });
+      form.resetFields();
       setUserInput({
         title: "",
         createdby: "",
         status: "",
-        due: "",
+        dueDate: "",
         description: "",
       });
       fetchTodos();
@@ -117,33 +170,11 @@ export const TodoInput: React.FC = () => {
 
   return (
     <>
-      <ul>
-        <Title> Hello </Title>
-        {todos.map((todo) => (
-            <Card
-              key={todo._id}
-              style={{ width: 300, marginTop: 16 }}
-              actions={[
-                <SettingOutlined key="setting" onClick={() => deleteTodo(todo._id)} />,
-                <EditOutlined key="edit" onClick={() => updateTodo(todo._id, { status: "Done" })} />,
-                <EllipsisOutlined key="ellipsis" />,
-              ]}
-            >
-              <Skeleton loading={loading} avatar active>
-                <Meta
-                  avatar={
-                    <Avatar src="https://api.dicebear.com/7.x/miniavs/svg?seed=2" />
-                  }
-                  title={todo.title}
-                  description={todo.description}
-                />
-              </Skeleton>
-            </Card>
-        ))}
-      </ul>
+      {contextHolder}
       <Button type="primary" onClick={showDrawer} icon={<PlusOutlined />}>
         New To-do
       </Button>
+      <TodoTable updateTodo={updateTodo} deleteTodo={deleteTodo}></TodoTable>
       <Drawer
         title="Create a new To-do"
         width={720}
@@ -157,13 +188,13 @@ export const TodoInput: React.FC = () => {
         extra={
           <Space>
             <Button onClick={onClose}>Cancel</Button>
-            <Button onClick={createTodo} type="primary">
+            <Button onClick={openMessage} type="primary">
               Create
             </Button>
           </Space>
         }
       >
-        <Form layout="vertical" hideRequiredMark>
+        <Form layout="vertical" hideRequiredMark onFinish={onClose} form={form}>
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
@@ -185,7 +216,7 @@ export const TodoInput: React.FC = () => {
                 rules={[{ required: true, message: "Name is Required" }]}
               >
                 <Input
-                  style={{ width: "100%" }}
+                  //   style={{ width: "100%" }}
                   placeholder="Please enter your name"
                   value={userInput.createdby}
                   onChange={handleChange}
@@ -200,8 +231,12 @@ export const TodoInput: React.FC = () => {
                 label="Status"
                 rules={[{ required: false }]}
               >
-                <Select placeholder="To-do Status">
-                  <Option value="todo">To-do</Option>
+                <Select
+                  id="status"
+                  placeholder="To-do Status"
+                  onSelect={handleChange}
+                >
+                  <Option value="to-do">to-do</Option>
                   <Option value="done">Done</Option>
                 </Select>
               </Form.Item>
@@ -214,9 +249,11 @@ export const TodoInput: React.FC = () => {
                 label="Due"
                 rules={[{ required: false }]}
               >
-                <DatePicker.RangePicker
+                <DatePicker
                   style={{ width: "100%" }}
+                  type="date"
                   getPopupContainer={(trigger) => trigger.parentElement!}
+                  onChange={handleDateChange}
                 />
               </Form.Item>
             </Col>
