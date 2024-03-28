@@ -15,7 +15,7 @@ This document provides an overview and documentation for the Todo application co
 ## Overview
 The Todo application allows users to manage their tasks by creating, updating, and deleting todos. It provides a user interface for adding new todos with details such as title, creator, status, due date, and description. Users can also edit and delete existing todos.
 
-## Components
+## Components  
 
 ### TodoInput Component
 - **Description**: This component renders the main interface of the Todo application.
