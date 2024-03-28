@@ -1,5 +1,5 @@
 import { atom } from "recoil";
-export interface Todo {
+export interface Todo{
     _id: string;
     title: string;
     createdby: string;

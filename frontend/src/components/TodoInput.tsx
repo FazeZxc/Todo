@@ -26,7 +26,7 @@ export const TodoInput: React.FC = () => {
   const backendUrl = useRecoilValue(backendUrlAtom);
   const setTodos = useSetRecoilState(todoAtom);
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
+  //   const [loading, setLoading] = useState(true);
   const [userInput, setUserInput] = useState<Partial<Todo>>(() => {
     return {
       title: "",
@@ -41,13 +41,21 @@ export const TodoInput: React.FC = () => {
     fetchTodos();
   });
 
+  interface TodoResponse {
+    todos: Todo[] | ((currVal: Todo[]) => Todo[]);
+    data: {
+      todos: Todo[];
+    };
+  }
   const fetchTodos = async () => {
     try {
-      const response = await axios.get<Todo[]>(backendUrl+"/todos", {
+      const response = await axios.get<TodoResponse>(backendUrl + "/todos", {
         withCredentials: true,
       });
-      setTodos(response.data.todos);
-      setLoading(false);
+      console.log(response);
+      if (response.data && Array.isArray(response.data.todos)) {
+        setTodos(response.data.todos);
+      }
     } catch (error) {
       console.error("Error fetching todos:", error);
     }
@@ -151,7 +159,7 @@ export const TodoInput: React.FC = () => {
     console.log(userInput);
     // openMessage()
     try {
-      await axios.post(backendUrl +"/todos", userInput, {
+      await axios.post(backendUrl + "/todos", userInput, {
         withCredentials: true,
       });
       form.resetFields();

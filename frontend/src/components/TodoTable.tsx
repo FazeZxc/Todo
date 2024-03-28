@@ -14,7 +14,14 @@ interface DataType {
   description: string;
 }
 
-const TodoTable: React.FC = ({ updateTodo, deleteTodo }) => {
+type updateTodoProp = (param1: string, param2: Partial<DataType>) => void;
+type deleteTodoProp = (param1: string) => void
+interface props {
+  updateTodo: updateTodoProp;
+  deleteTodo: deleteTodoProp;
+}
+
+const TodoTable: React.FC<props> = ({ updateTodo, deleteTodo }) => {
   const todos = useRecoilValue(todoAtom);
   const columns: TableProps<DataType>["columns"] = [
     {
@@ -69,8 +76,8 @@ const TodoTable: React.FC = ({ updateTodo, deleteTodo }) => {
             <CheckOutlined
               onClick={() => {
                 const updatedTodo = {
-                    status : "done"
-                }
+                  status: "done",
+                };
                 console.log(updatedTodo);
                 updateTodo(record._id, updatedTodo);
               }}
